@@ -65,7 +65,7 @@ export function extractCityState(location: string): { city: string; state: strin
   
   for (const pattern of patterns) {
     const match = location.match(pattern);
-    if (match) {
+    if (match && match[1] && match[2]) {
       return {
         city: match[1].trim(),
         state: match[2].trim().toUpperCase()
@@ -75,7 +75,7 @@ export function extractCityState(location: string): { city: string; state: strin
   
   // Fallback: try to extract state from end
   const stateMatch = location.match(/\b([A-Z]{2})\b$/);
-  if (stateMatch) {
+  if (stateMatch && stateMatch[1]) {
     return {
       city: location.replace(/\b[A-Z]{2}\b$/, '').trim().replace(/,$/, ''),
       state: stateMatch[1]
@@ -141,7 +141,7 @@ export function estimateCompanySize(text: string): string {
   
   for (const { pattern, format } of sizePatterns) {
     const match = text.match(pattern);
-    if (match) {
+    if (match && match[1] && match[2]) {
       return format(match[1], match[2]);
     }
   }

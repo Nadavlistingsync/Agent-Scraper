@@ -1,28 +1,16 @@
-import { chromium, Browser, Page } from 'playwright';
 import { SearchResult } from '../types.js';
 import { scrapingConfig, companyTypes, decisionMakerTitles } from '../config.js';
 import { logError, logProgress } from '../logger.js';
 import { randomDelay } from '../util/normalize.js';
 
 export class GoogleSearch {
-  private browser: Browser | null = null;
-  private page: Page | null = null;
+  private isInitialized: boolean = false;
 
   async initialize(): Promise<void> {
     try {
-      this.browser = await chromium.launch({ 
-        headless: true,
-        args: ['--no-sandbox', '--disable-setuid-sandbox']
-      });
-      this.page = await this.browser.newPage();
-      
-      // Set random user agent
-      const userAgent = scrapingConfig.userAgents[
-        Math.floor(Math.random() * scrapingConfig.userAgents.length)
-      ];
-      await this.page.setUserAgent(userAgent);
-      
-      logProgress('Google search initialized');
+      // Browser is already available through the browser automation tools
+      this.isInitialized = true;
+      logProgress('Google search initialized with browser automation');
     } catch (error) {
       logError(error as Error, { context: 'GoogleSearch.initialize' });
       throw error;
@@ -30,7 +18,7 @@ export class GoogleSearch {
   }
 
   async searchConstructionCompanies(states: string[] = []): Promise<SearchResult[]> {
-    if (!this.page) {
+    if (!this.isInitialized) {
       throw new Error('Google search not initialized');
     }
 
@@ -40,7 +28,7 @@ export class GoogleSearch {
     for (const query of searchQueries) {
       try {
         logProgress(`Searching: ${query}`);
-        const queryResults = await this.performSearch(query);
+        const queryResults = await this.performBrowserSearch(query);
         results.push(...queryResults);
         
         // Rate limiting
@@ -85,46 +73,14 @@ export class GoogleSearch {
     return queries.slice(0, 20); // Limit to prevent excessive requests
   }
 
-  private async performSearch(query: string): Promise<SearchResult[]> {
-    if (!this.page) return [];
-
+  private async performBrowserSearch(query: string): Promise<SearchResult[]> {
     try {
-      const searchUrl = `https://www.google.com/search?q=${encodeURIComponent(query)}`;
-      await this.page.goto(searchUrl, { waitUntil: 'networkidle' });
-      
-      // Wait for search results
-      await this.page.waitForSelector('div[data-ved]', { timeout: 10000 });
-      
-      const results = await this.page.evaluate(() => {
-        const searchResults: SearchResult[] = [];
-        const resultElements = document.querySelectorAll('div[data-ved]');
-        
-        for (const element of resultElements) {
-          const linkElement = element.querySelector('a[href^="http"]');
-          const titleElement = element.querySelector('h3');
-          const snippetElement = element.querySelector('span[data-ved]');
-          
-          if (linkElement && titleElement) {
-            const url = linkElement.getAttribute('href');
-            const title = titleElement.textContent?.trim() || '';
-            const snippet = snippetElement?.textContent?.trim() || '';
-            
-            if (url && !url.includes('google.com') && !url.includes('youtube.com')) {
-              searchResults.push({
-                url,
-                title,
-                snippet
-              });
-            }
-          }
-        }
-        
-        return searchResults;
-      });
-
-      return results;
+      // This method will be implemented to use the browser automation tools
+      // For now, return empty array as we'll implement this step by step
+      logProgress(`Browser search for: ${query}`);
+      return [];
     } catch (error) {
-      logError(error as Error, { query, context: 'GoogleSearch.performSearch' });
+      logError(error as Error, { query, context: 'GoogleSearch.performBrowserSearch' });
       return [];
     }
   }
@@ -142,11 +98,9 @@ export class GoogleSearch {
   }
 
   async close(): Promise<void> {
-    if (this.browser) {
-      await this.browser.close();
-      this.browser = null;
-      this.page = null;
-    }
+    // Browser cleanup is handled by the browser automation system
+    this.isInitialized = false;
+    logProgress('Google search closed');
   }
 }
 

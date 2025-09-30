@@ -8,8 +8,8 @@ export class PhoneEmailEnricher {
   
   async enrichContact(name: string, company: string, existingPhone?: string, existingEmail?: string): Promise<EnrichmentResult> {
     const result: EnrichmentResult = {
-      phone: existingPhone,
-      email: existingEmail,
+      phone: existingPhone || undefined,
+      email: existingEmail || undefined,
       verified: false
     };
     
@@ -18,8 +18,8 @@ export class PhoneEmailEnricher {
       if (config.enrichment.apolloApiKey) {
         const apolloResult = await this.enrichWithApollo(name, company);
         if (apolloResult) {
-          result.phone = apolloResult.phone || result.phone;
-          result.email = apolloResult.email || result.email;
+          result.phone = apolloResult.phone || result.phone || undefined;
+          result.email = apolloResult.email || result.email || undefined;
           result.verified = apolloResult.verified;
         }
       }
@@ -28,17 +28,19 @@ export class PhoneEmailEnricher {
       if (config.enrichment.hunterApiKey && !result.email) {
         const hunterResult = await this.enrichWithHunter(company);
         if (hunterResult) {
-          result.email = hunterResult.email || result.email;
+          result.email = hunterResult.email || result.email || undefined;
           result.verified = result.verified || hunterResult.verified;
         }
       }
       
       // Normalize results
       if (result.phone) {
-        result.phone = normalizePhone(result.phone);
+        const normalizedPhone = normalizePhone(result.phone);
+        result.phone = normalizedPhone || undefined;
       }
       if (result.email) {
-        result.email = normalizeEmail(result.email);
+        const normalizedEmail = normalizeEmail(result.email);
+        result.email = normalizedEmail || undefined;
       }
       
       logProgress(`Enriched contact: ${name} at ${company}`, {

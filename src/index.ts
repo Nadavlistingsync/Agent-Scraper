@@ -4,11 +4,13 @@ import { Command } from 'commander';
 import pLimit from 'p-limit';
 import { GoogleSearch, seedUrls } from './search/google.js';
 import { CompanyScraper } from './scrape/company.js';
+import { BrowserSearch } from './browser/browserSearch.js';
+import { BrowserScraper } from './browser/browserScraper.js';
 import { PeopleScraper } from './scrape/people.js';
 import { PhoneEmailEnricher } from './enrich/phoneEmail.js';
 import { GoogleSheetsAppender } from './sheets/append.js';
 import { ConstructionLead } from './types.js';
-import { targetStates, scrapingConfig } from './config.js';
+import { targetStates, scrapingConfig, config } from './config.js';
 import { logProgress, logError } from './logger.js';
 import { 
   isDuplicate, 
@@ -33,6 +35,8 @@ const options = program.opts();
 interface ScrapingSession {
   googleSearch: GoogleSearch;
   companyScraper: CompanyScraper;
+  browserSearch: BrowserSearch;
+  browserScraper: BrowserScraper;
   peopleScraper: PeopleScraper;
   enricher: PhoneEmailEnricher;
   sheetsAppender: GoogleSheetsAppender;
@@ -72,10 +76,10 @@ async function main(): Promise<void> {
 
 async function initializeSession(): Promise<ScrapingSession> {
   const limit = parseInt(options.limit);
-  const states = options.state ? options.state.split(',').map(s => s.trim().toUpperCase()) : [];
+  const states = options.state ? options.state.split(',').map((s: string) => s.trim().toUpperCase()) : [];
   
   // Validate states
-  const validStates = states.filter(state => targetStates.includes(state));
+  const validStates = states.filter((state: string) => targetStates.includes(state));
   if (states.length > 0 && validStates.length === 0) {
     throw new Error(`Invalid states: ${states.join(', ')}. Valid states: ${targetStates.join(', ')}`);
   }
@@ -83,6 +87,8 @@ async function initializeSession(): Promise<ScrapingSession> {
   const session: ScrapingSession = {
     googleSearch: new GoogleSearch(),
     companyScraper: new CompanyScraper(),
+    browserSearch: new BrowserSearch(),
+    browserScraper: new BrowserScraper(),
     peopleScraper: new PeopleScraper(),
     enricher: new PhoneEmailEnricher(),
     sheetsAppender: new GoogleSheetsAppender(),
@@ -95,6 +101,8 @@ async function initializeSession(): Promise<ScrapingSession> {
   // Initialize all components
   await session.googleSearch.initialize();
   await session.companyScraper.initialize();
+  await session.browserSearch.initialize();
+  await session.browserScraper.initialize();
   
   logProgress(`Initialized session with limit: ${limit}, states: ${validStates.join(', ') || 'all'}`);
   
@@ -125,8 +133,8 @@ async function processSeedUrls(session: ScrapingSession): Promise<void> {
 async function processMainScraping(session: ScrapingSession): Promise<void> {
   logProgress('Starting main scraping process...');
   
-  // Search for construction companies
-  const searchResults = await session.googleSearch.searchConstructionCompanies(session.states);
+  // Search for construction companies using browser-based search
+  const searchResults = await session.browserSearch.searchConstructionCompanies(session.states);
   logProgress(`Found ${searchResults.length} search results`);
   
   // Process search results
@@ -141,7 +149,7 @@ async function processMainScraping(session: ScrapingSession): Promise<void> {
     
     await limit(async () => {
       try {
-        await processUrl(session, result.url);
+        await processUrlWithBrowser(session, result.url);
         processedCount++;
         
         if (processedCount % 10 === 0) {
@@ -156,6 +164,48 @@ async function processMainScraping(session: ScrapingSession): Promise<void> {
   }
   
   logProgress(`Completed main scraping: ${processedCount} URLs processed`);
+}
+
+async function processUrlWithBrowser(session: ScrapingSession, url: string): Promise<void> {
+  try {
+    // Scrape company information using browser scraper
+    const companyInfo = await session.browserScraper.scrapeCompanyInfo(url);
+    if (!companyInfo) return;
+    
+    // Get all relevant pages
+    const allPages = [
+      ...companyInfo.leadershipPages,
+      ...companyInfo.contactPages,
+      ...companyInfo.aboutPages
+    ];
+    
+    if (allPages.length === 0) {
+      // Fallback to main page
+      allPages.push(url);
+    }
+    
+    // Process each page
+    for (const pageUrl of allPages.slice(0, 3)) { // Limit to 3 pages per company
+      try {
+        const html = await session.browserScraper.scrapePage(pageUrl);
+        if (!html) continue;
+        
+        const people = await session.peopleScraper.extractPeopleFromPage(html, pageUrl);
+        
+        for (const person of people) {
+          await processPerson(session, person, companyInfo, pageUrl);
+        }
+        
+        await randomDelay(1000, 3000);
+      } catch (error) {
+        logError(error as Error, { pageUrl, context: 'processUrlWithBrowser' });
+        continue;
+      }
+    }
+    
+  } catch (error) {
+    logError(error as Error, { url, context: 'processUrlWithBrowser' });
+  }
 }
 
 async function processUrl(session: ScrapingSession, url: string): Promise<void> {
@@ -292,6 +342,8 @@ async function finalizeSession(session: ScrapingSession): Promise<void> {
     // Close all resources
     await session.googleSearch.close();
     await session.companyScraper.close();
+    await session.browserSearch.close();
+    await session.browserScraper.close();
     
     // Final summary
     logProgress('=== SCRAPING COMPLETE ===');

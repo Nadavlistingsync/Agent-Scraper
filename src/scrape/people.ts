@@ -192,7 +192,7 @@ export class PeopleScraper {
     return people;
   }
 
-  private extractPersonFromElement($: cheerio.CheerioAPI, $element: cheerio.Cheerio<cheerio.Element>, sourceUrl: string): PersonInfo | null {
+  private extractPersonFromElement($: cheerio.CheerioAPI, $element: cheerio.Cheerio<any>, sourceUrl: string): PersonInfo | null {
     try {
       const text = $element.text();
       const html = $element.html() || '';
@@ -228,7 +228,7 @@ export class PeopleScraper {
     }
   }
 
-  private extractName($element: cheerio.Cheerio<cheerio.Element>, text: string): string | null {
+  private extractName($element: cheerio.Cheerio<any>, text: string): string | null {
     // Try to find name in common selectors
     const nameSelectors = [
       'h1', 'h2', 'h3', 'h4',
@@ -258,7 +258,7 @@ export class PeopleScraper {
     return null;
   }
 
-  private extractTitle($element: cheerio.Cheerio<cheerio.Element>, text: string): string | null {
+  private extractTitle($element: cheerio.Cheerio<any>, text: string): string | null {
     // Look for title in common selectors
     const titleSelectors = [
       '.title', '.position', '.role', '.job-title',
@@ -287,39 +287,39 @@ export class PeopleScraper {
     return null;
   }
 
-  private extractPhone($element: cheerio.Cheerio<cheerio.Element>, text: string, html: string): string | null {
+  private extractPhone($element: cheerio.Cheerio<any>, text: string, html: string): string | null {
     // Look for phone in links
     const phoneLinks = $element.find('a[href^="tel:"]');
     if (phoneLinks.length) {
       const phone = phoneLinks.first().attr('href')?.replace('tel:', '');
       if (phone) {
-        return normalizePhone(phone);
+        return normalizePhone(phone) || null;
       }
     }
     
     // Extract from text
     const phones = extractPhonesFromText(text);
-    if (phones.length > 0) {
-      return normalizePhone(phones[0]);
+    if (phones.length > 0 && phones[0]) {
+      return normalizePhone(phones[0]) || null;
     }
     
     return null;
   }
 
-  private extractEmail($element: cheerio.Cheerio<cheerio.Element>, text: string, html: string): string | null {
+  private extractEmail($element: cheerio.Cheerio<any>, text: string, html: string): string | null {
     // Look for email in links
     const emailLinks = $element.find('a[href^="mailto:"]');
     if (emailLinks.length) {
       const email = emailLinks.first().attr('href')?.replace('mailto:', '');
       if (email) {
-        return normalizeEmail(email);
+        return normalizeEmail(email) || null;
       }
     }
     
     // Extract from text
     const emails = extractEmailsFromText(text);
-    if (emails.length > 0) {
-      return normalizeEmail(emails[0]);
+    if (emails.length > 0 && emails[0]) {
+      return normalizeEmail(emails[0]) || null;
     }
     
     return null;
@@ -362,13 +362,15 @@ export class PeopleScraper {
         title = line;
       } else if (!phone) {
         const phones = extractPhonesFromText(line);
-        if (phones.length > 0) {
-          phone = normalizePhone(phones[0]) || '';
+        if (phones.length > 0 && phones[0]) {
+          const normalizedPhone = normalizePhone(phones[0]);
+          phone = normalizedPhone || '';
         }
       } else if (!email) {
         const emails = extractEmailsFromText(line);
-        if (emails.length > 0) {
-          email = normalizeEmail(emails[0]) || '';
+        if (emails.length > 0 && emails[0]) {
+          const normalizedEmail = normalizeEmail(emails[0]);
+          email = normalizedEmail || '';
         }
       }
     }
