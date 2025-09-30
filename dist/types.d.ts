@@ -11,6 +11,7 @@ export interface ConstructionLead {
     SourceURL: string;
     Verified: 'Y' | 'N';
     Notes: string;
+    LeadType?: 'construction' | 'real-estate';
 }
 export interface CompanyInfo {
     name: string;

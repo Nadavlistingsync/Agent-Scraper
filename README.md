@@ -1,14 +1,17 @@
-# Construction Lead Generator
+# Lead Generator - Construction & Real Estate
 
-A Node.js/TypeScript automation tool for generating leads from mid-market construction companies in the USA.
+A Node.js/TypeScript automation tool for generating leads from construction companies and real estate agencies in the USA.
 
 ## Features
 
-- **Target Audience**: Decision makers at construction companies (50-500 employees, $5M-$200M revenue)
-- **Data Sources**: Google search, company websites, trade associations
+- **Target Audience**: 
+  - Construction decision makers (CEO, COO, VP Operations, Project Managers)
+  - Real estate agents and brokers (Realtors, Managing Brokers, Team Leaders)
+- **Data Sources**: Google search, company websites, trade associations, real estate directories
 - **Output**: Google Sheets with structured lead data
 - **Quality Gates**: Phone validation, title filtering, deduplication
 - **Enrichment**: Optional Apollo/Hunter API integration for contact verification
+- **Dual Mode**: Automatically categorizes leads as construction or real estate
 
 ## Prerequisites
 
@@ -83,7 +86,7 @@ The tool writes to a Google Sheet with these columns:
 
 | Column | Description |
 |--------|-------------|
-| Name | Full name of the decision maker |
+| Name | Full name of the decision maker or agent |
 | Title | Job title (filtered for decision makers only) |
 | Company | Company name |
 | Phone | Phone number (required, E.164 format) |
@@ -95,26 +98,44 @@ The tool writes to a Google Sheet with these columns:
 | SourceURL | URL where the lead was found |
 | Verified | Y/N if contact info was verified |
 | Notes | Additional notes |
+| LeadType | 'construction' or 'real-estate' |
 
 ## Target Roles
 
-The tool only collects leads with these decision-maker titles:
+### Construction Decision Makers
 - Owner
 - President
-- CEO
-- COO
+- CEO / Chief Executive
+- COO / Chief Operating Officer
 - Managing Partner
-- VP Operations
+- VP Operations / Vice President of Operations
 - Director of Operations
 - Head Estimator
+- Project Manager
+- Operations Manager
+
+### Real Estate Professionals
+- Real Estate Agent / Realtor
+- Real Estate Broker
+- Managing Broker
+- Principal Broker
+- Associate Broker
+- Owner/Broker
+- Team Leader
+- Sales Manager
+- Listing Agent
+- Buyer's Agent
 
 ## Quality Gates
 
 - **Phone Required**: All leads must have a phone number
-- **Title Filtering**: Only decision-maker titles are included
+- **Title Filtering**: Only decision-maker and professional titles are included
 - **Deduplication**: Prevents duplicate leads based on phone/email/name+company
-- **US Only**: Focuses on US-based companies
-- **Company Size**: Targets 50-500 employees or $5M-$200M revenue
+- **US Only**: Focuses on US-based companies and agents
+- **Company Size**: 
+  - Construction: 50-500 employees or $5M-$200M revenue
+  - Real Estate: Top-producing agents and established brokerages
+- **Lead Categorization**: Automatically categorizes as construction or real estate
 
 ## Rate Limiting
 

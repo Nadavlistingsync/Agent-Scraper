@@ -17,7 +17,11 @@ export declare const config: {
 };
 export declare const scrapingConfig: ScrapingConfig;
 export declare const targetStates: string[];
+export declare const constructionCompanyTypes: string[];
+export declare const realEstateCompanyTypes: string[];
 export declare const companyTypes: string[];
+export declare const constructionTitles: string[];
+export declare const realEstateTitles: string[];
 export declare const decisionMakerTitles: string[];
 export declare const titleRegex: RegExp;
 export declare const phoneRegex: RegExp;

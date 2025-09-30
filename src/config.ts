@@ -40,7 +40,8 @@ export const targetStates = [
   'SD', 'TN', 'TX', 'UT', 'VT', 'VA', 'WA', 'WV', 'WI', 'WY'
 ];
 
-export const companyTypes = [
+// Construction company types
+export const constructionCompanyTypes = [
   'general contractor',
   'design-build',
   'construction management',
@@ -48,10 +49,30 @@ export const companyTypes = [
   'electrical contractor',
   'roofing contractor',
   'concrete contractor',
-  'specialty contractor'
+  'specialty contractor',
+  'plumbing contractor',
+  'carpentry contractor'
 ];
 
-export const decisionMakerTitles = [
+// Real estate company types
+export const realEstateCompanyTypes = [
+  'real estate agency',
+  'real estate brokerage',
+  'real estate firm',
+  'realty company',
+  'property management',
+  'commercial real estate',
+  'residential real estate'
+];
+
+// Combined company types
+export const companyTypes = [
+  ...constructionCompanyTypes,
+  ...realEstateCompanyTypes
+];
+
+// Construction decision maker titles
+export const constructionTitles = [
   'Owner',
   'President',
   'Chief Executive',
@@ -61,7 +82,31 @@ export const decisionMakerTitles = [
   'Vice President of Operations',
   'VP Operations',
   'Director of Operations',
-  'Head Estimator'
+  'Head Estimator',
+  'Project Manager',
+  'Operations Manager'
+];
+
+// Real estate agent/broker titles
+export const realEstateTitles = [
+  'Real Estate Agent',
+  'Realtor',
+  'Real Estate Broker',
+  'Broker',
+  'Managing Broker',
+  'Principal Broker',
+  'Associate Broker',
+  'Owner/Broker',
+  'Team Leader',
+  'Sales Manager',
+  'Listing Agent',
+  'Buyer\'s Agent'
+];
+
+// Combined decision maker titles
+export const decisionMakerTitles = [
+  ...constructionTitles,
+  ...realEstateTitles
 ];
 
 export const titleRegex = new RegExp(
