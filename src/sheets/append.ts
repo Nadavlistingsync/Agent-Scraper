@@ -166,6 +166,11 @@ export class GoogleSheetsAppender {
 
   async getExistingLeads(): Promise<ConstructionLead[]> {
     try {
+      if (!this.sheets) {
+        logProgress('Mock mode: Returning empty existing leads list');
+        return [];
+      }
+
       const response = await this.sheets.spreadsheets.values.get({
         spreadsheetId: this.spreadsheetId,
         range: 'Construction DM!A2:M', // Skip header row
@@ -198,16 +203,25 @@ export class GoogleSheetsAppender {
       return leads;
     } catch (error) {
       logError(error as Error, { context: 'GoogleSheetsAppender.getExistingLeads' });
+      logProgress('Mock mode: Returning empty existing leads due to error');
       return [];
     }
   }
 
   async getSheetUrl(): Promise<string> {
+    if (!this.sheets) {
+      return 'Mock mode: No Google Sheet URL available';
+    }
     return `https://docs.google.com/spreadsheets/d/${this.spreadsheetId}`;
   }
 
   async getRowCount(): Promise<number> {
     try {
+      if (!this.sheets) {
+        logProgress('Mock mode: Returning 0 row count');
+        return 0;
+      }
+
       const response = await this.sheets.spreadsheets.values.get({
         spreadsheetId: this.spreadsheetId,
         range: 'Construction DM!A:A',
@@ -217,6 +231,7 @@ export class GoogleSheetsAppender {
       return rows.length - 1; // Subtract header row
     } catch (error) {
       logError(error as Error, { context: 'GoogleSheetsAppender.getRowCount' });
+      logProgress('Mock mode: Returning 0 row count due to error');
       return 0;
     }
   }

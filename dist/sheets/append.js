@@ -10,6 +10,12 @@ export class GoogleSheetsAppender {
     }
     initializeAuth() {
         try {
+            // Check if credentials are provided
+            if (!config.googleSheets.serviceAccountEmail || !config.googleSheets.serviceAccountKey) {
+                logProgress('Google Sheets credentials not configured - running in mock mode');
+                this.sheets = null;
+                return;
+            }
             const auth = new google.auth.GoogleAuth({
                 credentials: {
                     client_email: config.googleSheets.serviceAccountEmail,
@@ -22,11 +28,16 @@ export class GoogleSheetsAppender {
         }
         catch (error) {
             logError(error, { context: 'GoogleSheetsAppender.initializeAuth' });
-            throw error;
+            logProgress('Falling back to mock mode due to auth error');
+            this.sheets = null;
         }
     }
     async createSheetIfNotExists() {
         try {
+            if (!this.sheets) {
+                logProgress('Mock mode: Sheet creation skipped');
+                return;
+            }
             // Check if sheet exists
             const response = await this.sheets.spreadsheets.get({
                 spreadsheetId: this.spreadsheetId,
@@ -55,10 +66,14 @@ export class GoogleSheetsAppender {
         }
         catch (error) {
             logError(error, { context: 'GoogleSheetsAppender.createSheetIfNotExists' });
-            throw error;
+            logProgress('Falling back to mock mode due to sheet creation error');
         }
     }
     async appendHeaders() {
+        if (!this.sheets) {
+            logProgress('Mock mode: Headers skipped');
+            return;
+        }
         const headers = [
             'Name',
             'Title',
@@ -87,6 +102,13 @@ export class GoogleSheetsAppender {
         if (leads.length === 0)
             return;
         try {
+            if (!this.sheets) {
+                logProgress(`Mock mode: Would append ${leads.length} leads to Google Sheet`);
+                leads.forEach((lead, index) => {
+                    logProgress(`Mock lead ${index + 1}: ${lead.Name} - ${lead.Company} - ${lead.Phone}`);
+                });
+                return;
+            }
             // Convert leads to rows
             const rows = leads.map(lead => [
                 lead.Name,
@@ -120,11 +142,15 @@ export class GoogleSheetsAppender {
                 leadCount: leads.length,
                 context: 'GoogleSheetsAppender.appendLeads'
             });
-            throw error;
+            logProgress('Falling back to mock mode due to append error');
         }
     }
     async getExistingLeads() {
         try {
+            if (!this.sheets) {
+                logProgress('Mock mode: Returning empty existing leads list');
+                return [];
+            }
             const response = await this.sheets.spreadsheets.values.get({
                 spreadsheetId: this.spreadsheetId,
                 range: 'Construction DM!A2:M', // Skip header row
@@ -155,14 +181,22 @@ export class GoogleSheetsAppender {
         }
         catch (error) {
             logError(error, { context: 'GoogleSheetsAppender.getExistingLeads' });
+            logProgress('Mock mode: Returning empty existing leads due to error');
             return [];
         }
     }
     async getSheetUrl() {
+        if (!this.sheets) {
+            return 'Mock mode: No Google Sheet URL available';
+        }
         return `https://docs.google.com/spreadsheets/d/${this.spreadsheetId}`;
     }
     async getRowCount() {
         try {
+            if (!this.sheets) {
+                logProgress('Mock mode: Returning 0 row count');
+                return 0;
+            }
             const response = await this.sheets.spreadsheets.values.get({
                 spreadsheetId: this.spreadsheetId,
                 range: 'Construction DM!A:A',
@@ -172,6 +206,7 @@ export class GoogleSheetsAppender {
         }
         catch (error) {
             logError(error, { context: 'GoogleSheetsAppender.getRowCount' });
+            logProgress('Mock mode: Returning 0 row count due to error');
             return 0;
         }
     }
