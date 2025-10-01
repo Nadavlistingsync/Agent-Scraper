@@ -4,6 +4,8 @@ import pLimit from 'p-limit';
 import { SimpleBrowserSearch } from './browser/simpleBrowserSearch.js';
 import { SimpleBrowserScraper } from './browser/simpleBrowserScraper.js';
 import { PeopleScraper } from './scrape/people.js';
+import { GoogleSheetsAppender } from './sheets/append.js';
+import { CSVExporter, JSONExporter, HTMLExporter } from './export/index.js';
 import { targetStates, scrapingConfig } from './config.js';
 import { logProgress, logError } from './logger.js';
 import { isDuplicate, extractCityState, estimateCompanySize, randomDelay } from './util/normalize.js';
@@ -14,6 +16,11 @@ program
     .version('1.0.0')
     .option('-l, --limit <number>', 'Maximum number of leads to collect', '50')
     .option('-s, --state <states>', 'Comma-separated list of states to focus on', '')
+    .option('--csv', 'Export to CSV file')
+    .option('--json', 'Export to JSON file')
+    .option('--html', 'Export to HTML report')
+    .option('--sheets', 'Export to Google Sheets')
+    .option('--all-formats', 'Export to all formats (CSV, JSON, HTML)')
     .parse();
 const options = program.opts();
 async function main() {
@@ -215,10 +222,73 @@ async function finalizeSession(session) {
                 logProgress(`   Website: ${lead.Website}`);
             });
         }
+        // Export data based on options
+        await exportData(session.newLeads);
         logProgress('\n=== END ===');
     }
     catch (error) {
         logError(error, { context: 'finalizeSession' });
+    }
+}
+async function exportData(leads) {
+    if (leads.length === 0) {
+        logProgress('\nNo leads to export');
+        return;
+    }
+    const opts = options;
+    const shouldExportAll = opts.allFormats;
+    logProgress('\n📤 EXPORTING DATA...');
+    try {
+        // CSV Export
+        if (opts.csv || shouldExportAll) {
+            const csvExporter = new CSVExporter();
+            const csvPath = await csvExporter.exportToCSV(leads);
+            logProgress(`📊 CSV: ${csvPath}`);
+        }
+        // JSON Export
+        if (opts.json || shouldExportAll) {
+            const jsonExporter = new JSONExporter();
+            const jsonPath = await jsonExporter.exportToJSON(leads);
+            logProgress(`📋 JSON: ${jsonPath}`);
+        }
+        // HTML Export
+        if (opts.html || shouldExportAll) {
+            const htmlExporter = new HTMLExporter();
+            const htmlPath = await htmlExporter.exportToHTML(leads);
+            logProgress(`🌐 HTML: ${htmlPath}`);
+            logProgress(`   Open in browser: file://${htmlPath}`);
+        }
+        // Google Sheets Export
+        if (opts.sheets) {
+            try {
+                const sheetsAppender = new GoogleSheetsAppender();
+                await sheetsAppender.createSheetIfNotExists();
+                await sheetsAppender.appendLeads(leads);
+                const sheetUrl = await sheetsAppender.getSheetUrl();
+                logProgress(`📊 Google Sheets: ${sheetUrl}`);
+            }
+            catch (error) {
+                logError(error, { context: 'exportData.sheets' });
+                logProgress('⚠️  Google Sheets export failed. Make sure you have configured the credentials in .env');
+            }
+        }
+        // If no export option specified, export to all local formats
+        if (!opts.csv && !opts.json && !opts.html && !opts.sheets && !shouldExportAll) {
+            logProgress('ℹ️  No export format specified. Exporting to all local formats...');
+            const csvExporter = new CSVExporter();
+            const jsonExporter = new JSONExporter();
+            const htmlExporter = new HTMLExporter();
+            const csvPath = await csvExporter.exportToCSV(leads);
+            const jsonPath = await jsonExporter.exportToJSON(leads);
+            const htmlPath = await htmlExporter.exportToHTML(leads);
+            logProgress(`📊 CSV: ${csvPath}`);
+            logProgress(`📋 JSON: ${jsonPath}`);
+            logProgress(`🌐 HTML: ${htmlPath}`);
+            logProgress(`   Open in browser: file://${htmlPath}`);
+        }
+    }
+    catch (error) {
+        logError(error, { context: 'exportData' });
     }
 }
 // Handle graceful shutdown

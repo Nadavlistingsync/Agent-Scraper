@@ -63,7 +63,11 @@ HUNTER_API_KEY=your_hunter_api_key_here
 
 ### Basic Usage
 ```bash
+# Run with default settings (exports to CSV, JSON, and HTML)
 pnpm start
+
+# Or use the simple implementation
+npx tsx src/simpleIndex.ts
 ```
 
 ### With Options
@@ -71,14 +75,47 @@ pnpm start
 # Limit to 250 leads, focus on specific states
 pnpm start -- --limit 250 --state CA,TX,FL
 
-# Use seed URLs for testing
-pnpm start -- --seed --limit 50
+# Export only to CSV
+pnpm start -- --csv
+
+# Export to Google Sheets
+pnpm start -- --sheets
+
+# Export to all formats
+pnpm start -- --all-formats
 ```
 
 ### Available Options
-- `--limit <number>`: Maximum number of leads to collect (default: 250)
+- `--limit <number>`: Maximum number of leads to collect (default: 50)
 - `--state <states>`: Comma-separated list of states to focus on
-- `--seed`: Use built-in seed URLs for initial testing
+- `--csv`: Export to CSV file (Excel compatible)
+- `--json`: Export to JSON file
+- `--html`: Export to HTML report (interactive browser view)
+- `--sheets`: Export to Google Sheets (requires setup)
+- `--all-formats`: Export to all formats at once
+
+### Export Formats
+
+#### 1. **CSV Export** (Default)
+- Opens in Excel, Google Sheets, or any spreadsheet software
+- Located in `output/leads-YYYY-MM-DD.csv`
+- Separate files for construction and real estate if using `--csv`
+
+#### 2. **JSON Export** (Default)
+- Structured data with metadata
+- Located in `output/leads-YYYY-MM-DD.json`
+- Perfect for developers and data processing
+
+#### 3. **HTML Report** (Default)
+- Beautiful interactive report in your browser
+- Located in `output/leads-report-YYYY-MM-DD.html`
+- Tabs for All Leads, Construction, and Real Estate
+- Searchable and filterable
+
+#### 4. **Google Sheets** (Requires Setup)
+- Real-time collaboration
+- Automatic syncing
+- See [Google Sheets Setup](#google-sheets-setup) below
 
 ## Output Schema
 

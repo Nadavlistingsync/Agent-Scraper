@@ -71,11 +71,12 @@ export class GoogleSheetsAppender {
             'Website',
             'SourceURL',
             'Verified',
+            'Lead Type',
             'Notes'
         ];
         await this.sheets.spreadsheets.values.update({
             spreadsheetId: this.spreadsheetId,
-            range: 'Construction DM!A1:L1',
+            range: 'Construction DM!A1:M1',
             valueInputOption: 'RAW',
             resource: {
                 values: [headers],
@@ -99,12 +100,13 @@ export class GoogleSheetsAppender {
                 lead.Website,
                 lead.SourceURL,
                 lead.Verified,
+                lead.LeadType || 'construction',
                 lead.Notes
             ]);
             // Append to sheet
             await this.sheets.spreadsheets.values.append({
                 spreadsheetId: this.spreadsheetId,
-                range: 'Construction DM!A:L',
+                range: 'Construction DM!A:M',
                 valueInputOption: 'RAW',
                 insertDataOption: 'INSERT_ROWS',
                 resource: {
@@ -125,7 +127,7 @@ export class GoogleSheetsAppender {
         try {
             const response = await this.sheets.spreadsheets.values.get({
                 spreadsheetId: this.spreadsheetId,
-                range: 'Construction DM!A2:L', // Skip header row
+                range: 'Construction DM!A2:M', // Skip header row
             });
             const rows = response.data.values || [];
             const leads = [];
@@ -143,7 +145,8 @@ export class GoogleSheetsAppender {
                         Website: row[8] || '',
                         SourceURL: row[9] || '',
                         Verified: row[10] || 'N',
-                        Notes: row[11] || ''
+                        LeadType: row[11] || 'construction',
+                        Notes: row[12] || ''
                     });
                 }
             }

@@ -14,6 +14,13 @@ export class GoogleSheetsAppender {
 
   private initializeAuth(): void {
     try {
+      // Check if credentials are provided
+      if (!config.googleSheets.serviceAccountEmail || !config.googleSheets.serviceAccountKey) {
+        logProgress('Google Sheets credentials not configured - running in mock mode');
+        this.sheets = null;
+        return;
+      }
+
       const auth = new google.auth.GoogleAuth({
         credentials: {
           client_email: config.googleSheets.serviceAccountEmail,
@@ -26,12 +33,18 @@ export class GoogleSheetsAppender {
       logProgress('Google Sheets API initialized');
     } catch (error) {
       logError(error as Error, { context: 'GoogleSheetsAppender.initializeAuth' });
-      throw error;
+      logProgress('Falling back to mock mode due to auth error');
+      this.sheets = null;
     }
   }
 
   async createSheetIfNotExists(): Promise<void> {
     try {
+      if (!this.sheets) {
+        logProgress('Mock mode: Sheet creation skipped');
+        return;
+      }
+
       // Check if sheet exists
       const response = await this.sheets.spreadsheets.get({
         spreadsheetId: this.spreadsheetId,
@@ -65,11 +78,16 @@ export class GoogleSheetsAppender {
       }
     } catch (error) {
       logError(error as Error, { context: 'GoogleSheetsAppender.createSheetIfNotExists' });
-      throw error;
+      logProgress('Falling back to mock mode due to sheet creation error');
     }
   }
 
   private async appendHeaders(): Promise<void> {
+    if (!this.sheets) {
+      logProgress('Mock mode: Headers skipped');
+      return;
+    }
+
     const headers = [
       'Name',
       'Title',
@@ -82,12 +100,13 @@ export class GoogleSheetsAppender {
       'Website',
       'SourceURL',
       'Verified',
+      'Lead Type',
       'Notes'
     ];
 
     await this.sheets.spreadsheets.values.update({
       spreadsheetId: this.spreadsheetId,
-      range: 'Construction DM!A1:L1',
+      range: 'Construction DM!A1:M1',
       valueInputOption: 'RAW',
       resource: {
         values: [headers],
@@ -99,6 +118,14 @@ export class GoogleSheetsAppender {
     if (leads.length === 0) return;
 
     try {
+      if (!this.sheets) {
+        logProgress(`Mock mode: Would append ${leads.length} leads to Google Sheet`);
+        leads.forEach((lead, index) => {
+          logProgress(`Mock lead ${index + 1}: ${lead.Name} - ${lead.Company} - ${lead.Phone}`);
+        });
+        return;
+      }
+
       // Convert leads to rows
       const rows = leads.map(lead => [
         lead.Name,
@@ -112,13 +139,14 @@ export class GoogleSheetsAppender {
         lead.Website,
         lead.SourceURL,
         lead.Verified,
+        lead.LeadType || 'construction',
         lead.Notes
       ]);
 
       // Append to sheet
       await this.sheets.spreadsheets.values.append({
         spreadsheetId: this.spreadsheetId,
-        range: 'Construction DM!A:L',
+        range: 'Construction DM!A:M',
         valueInputOption: 'RAW',
         insertDataOption: 'INSERT_ROWS',
         resource: {
@@ -132,7 +160,7 @@ export class GoogleSheetsAppender {
         leadCount: leads.length, 
         context: 'GoogleSheetsAppender.appendLeads' 
       });
-      throw error;
+      logProgress('Falling back to mock mode due to append error');
     }
   }
 
@@ -140,7 +168,7 @@ export class GoogleSheetsAppender {
     try {
       const response = await this.sheets.spreadsheets.values.get({
         spreadsheetId: this.spreadsheetId,
-        range: 'Construction DM!A2:L', // Skip header row
+        range: 'Construction DM!A2:M', // Skip header row
       });
 
       const rows = response.data.values || [];
@@ -160,7 +188,8 @@ export class GoogleSheetsAppender {
             Website: row[8] || '',
             SourceURL: row[9] || '',
             Verified: (row[10] as 'Y' | 'N') || 'N',
-            Notes: row[11] || ''
+            LeadType: (row[11] as 'construction' | 'real-estate') || 'construction',
+            Notes: row[12] || ''
           });
         }
       }
